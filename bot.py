@@ -44,19 +44,36 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id not in user_history:
         user_history[user_id] = []
     
-    # 2. Image Generation Trigger (Keyword based)
-    if user_text.lower().startswith(("/draw", "generate image", "photo of")):
-        await update.message.reply_text("Theher jao yaar, photo bana rahi hoon... ✨")
-        prompt = user_text.replace("/draw", "").strip()
+        # 2. Image Generation Logic
+    if user_text.lower().startswith(("/draw", "banao", "photo")):
+        await update.message.reply_text("Ruko yaar, pencil nikaal loon... 🎨")
+        
+        # Clean the prompt
+        prompt_to_send = user_text.replace("/draw", "").strip()
+        
         try:
-            response = requests.post(IMAGE_API_URL, json={"prompt": prompt}).json()
-            if response.get("status") == "success":
-                await update.message.reply_photo(photo=response["imageUrl"])
+            # POST request to your PicoApps API
+            response = requests.post(IMAGE_API_URL, json={"prompt": prompt_to_send})
+            data = response.json()
+
+            if data.get("status") == "success":
+                image_url = data.get("imageUrl")
+                
+                # This line sends the image DIRECTLY into the chat bubble
+                await context.bot.send_photo(
+                    chat_id=update.effective_chat.id,
+                    photo=image_url,
+                    caption=f"Ye lo! '{prompt_to_send}' ka scene on hai. Kaisa laga? ✨",
+                    reply_to_message_id=update.message.message_id
+                )
             else:
-                await update.message.reply_text("Oops, photo nahi bani. API ka nakhra hai.")
-        except:
-            await update.message.reply_text("Internet issue shayad, try again!")
+                await update.message.reply_text("Hadh ho gayi, API nakhre kar rahi hai. Phir se try karo?")
+                
+        except Exception as e:
+            print(f"Error drawing: {e}")
+            await update.message.reply_text("Net ka masla hai shayad, Allied Science College ka Wi-Fi wese hi slow hai! 🙄")
         return
+
 
     # 3. RAG + Text Generation
     retrieved_info = get_contextual_retrieval(user_text)
